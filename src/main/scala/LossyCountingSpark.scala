@@ -1,6 +1,7 @@
 
 import java.text.DecimalFormat
 
+import _root_.LossyCountingSpark.Item.Item
 import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.dstream.{InputDStream, DStream}
 import org.apache.spark.streaming.{Minutes, Seconds, StreamingContext}
@@ -63,7 +64,7 @@ object LossyCountingSpark {
     val itemOneValuePairs: DStream[(String, Int)] = items.map(item => (item, 1))
     val countPerItem: DStream[(String, Int)] = itemOneValuePairs.reduceByKey((count1, count2) => count1 + count2)
 
-    val updatedState = countPerItem.updateStateByKey(updateFrequencyByKey _,
+    val updatedState = countPerItem.updateStateByKey(updateFrequencyByKeyAndDecr _,
       new HashPartitioner(streamingContext.sparkContext.defaultParallelism))
 
     //keep only the items that exceed the threshold given by the Lossy Counting algorithm
@@ -84,7 +85,7 @@ object LossyCountingSpark {
   }
 
 
-  def updateFrequencyByKey(newValues: Seq[Int], currentCount: Option[Int]): Option[Int] = {
+  def updateFrequencyByKeyAndDecr(newValues: Seq[Int], currentCount: Option[Int]): Option[Int] = {
     val sum: Int = newValues.sum
     val aggregate: Int = currentCount match {
       case Some(count) =>
@@ -104,6 +105,7 @@ object LossyCountingSpark {
   def printTrueCounts(labelWithCounts: mutable.HashMap[String, Int]) = {
     val totalElements = labelWithCounts.foldLeft(0)(_ + _._2)
     println("True Counts")
+    println(s"$totalElements total items")
     val df = new DecimalFormat("#.##")
     for (labelWithCount <- labelWithCounts) {
       val trueCount = labelWithCount._2
@@ -134,6 +136,7 @@ object LossyCountingSpark {
     }
     seq.toList
   }
+
 
 
   private def itemShouldBeEliminated(decrementedValue: Int): Boolean = {
