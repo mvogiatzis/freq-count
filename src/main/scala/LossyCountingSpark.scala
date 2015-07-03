@@ -1,8 +1,6 @@
 
 import java.text.DecimalFormat
 
-import model.Item
-import model.Item.Item
 import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.dstream.{InputDStream, DStream}
 import org.apache.spark.streaming.{Minutes, Seconds, StreamingContext}
@@ -25,6 +23,15 @@ object LossyCountingSpark {
   val error = 0.1 * frequency
 
   val rand = new Random()
+
+  object Item extends Enumeration{
+    type Item = Value
+    val Red = Value("Red")
+    val Green = Value("Green")
+    val Blue = Value ("Blue")
+    val Yellow = Value ("Yellow")
+    val Brown = Value ("Brown")
+  }
 
   /**
    * Simulation of the window input data
