@@ -1,4 +1,6 @@
 
+import java.text.DecimalFormat
+
 import model.Item
 import model.Item.Item
 import org.apache.spark.rdd.RDD
@@ -29,8 +31,8 @@ object LossyCountingSpark {
    */
   val itemBatches = List[List[String]](
     List.concat(create(70, Item.Red), create(10, Item.Blue), create(15, Item.Yellow), create(2, Item.Brown), create(3, Item.Green)),
-    List.concat(create(60, Item.Red), create(20, Item.Blue), create(10, Item.Yellow)),
-    List.concat(create(70, Item.Red), create(15, Item.Blue), create(1, Item.Yellow), create(2, Item.Brown), create(13, Item.Green)),
+    List.concat(create(60, Item.Red), create(20, Item.Blue), create(20, Item.Yellow)),
+    List.concat(create(70, Item.Red), create(15, Item.Blue), create(0, Item.Yellow), create(2, Item.Brown), create(13, Item.Green)),
     List.concat(create(80, Item.Red), create(20, Item.Blue)),
     List.concat(create(80, Item.Red), create(20, Item.Blue))
   )
@@ -40,15 +42,15 @@ object LossyCountingSpark {
     val sc = initSparkContext()
     val frequencyVal = sc.broadcast(frequency)
     val errorVal = sc.broadcast(error)
-    val streamingContext = initStreamingContext(sc)
+    val streamingContext = new StreamingContext(sc, Seconds(1))
     streamingContext.checkpoint("./checkpoint/")
-    var currentWindow = 0
+    var totalWindows = 0
 
     val rddQueue = new mutable.SynchronizedQueue[RDD[String]]()
     val inputDStream = streamingContext.queueStream(rddQueue)
 
     //update window on driver
-    inputDStream.foreachRDD(rdd => currentWindow += 1)
+    inputDStream.foreachRDD(rdd => totalWindows += 1)
 
     val items: DStream[String] = inputDStream.flatMap(line => line.split(" "))
     val itemOneValuePairs: DStream[(String, Int)] = items.map(item => (item, 1))
@@ -57,19 +59,19 @@ object LossyCountingSpark {
     val updatedState = countPerItem.updateStateByKey(updateFrequencyByKey _,
       new HashPartitioner(streamingContext.sparkContext.defaultParallelism))
 
-    //keep only what exceeds the threshold given by the Lossy Counting algorithm
-    val output = updatedState.filter(itemWithCounts => itemWithCounts._2.toDouble > (frequencyVal.value * currentWindow - errorVal.value * currentWindow))
+    //keep only the items that exceed the threshold given by the Lossy Counting algorithm
+    val output = updatedState.filter(itemWithCounts => itemWithCounts._2.toDouble > (frequencyVal.value * totalWindows - errorVal.value * totalWindows))
     output.print()
 
     streamingContext.start() // Start the computation
 
-    // Create and push some RDDs into
+    // Create and push some RDDs into the 
     for (i <- itemBatches.indices) {
       rddQueue += streamingContext.sparkContext.makeRDD(itemBatches(i))
       Thread.sleep(1000)
     }
     val labelWithCounts = calcTrueCounts(itemBatches)
-    printCounts(labelWithCounts)
+    printTrueCounts(labelWithCounts)
 
     streamingContext.stop()
   }
@@ -92,13 +94,14 @@ object LossyCountingSpark {
   }
 
 
-  def printCounts(labelWithCounts: mutable.HashMap[String, Int]) = {
+  def printTrueCounts(labelWithCounts: mutable.HashMap[String, Int]) = {
     val totalElements = labelWithCounts.foldLeft(0)(_ + _._2)
     println("True Counts")
+    val df = new DecimalFormat("#.##")
     for (labelWithCount <- labelWithCounts) {
       val trueCount = labelWithCount._2
       val trueFreq = calcFreq(trueCount, totalElements)
-      println(s"${labelWithCount._1} - $trueFreq with true count $trueCount")
+      println(s"${labelWithCount._1} - ${df.format(trueFreq)} % with true count $trueCount")
     }
   }
 
@@ -133,10 +136,6 @@ object LossyCountingSpark {
   def initSparkContext(): SparkContext = {
     val conf = new SparkConf().setMaster("local[2]").setAppName("Lossy_Counting")
     new SparkContext(conf)
-  }
-
-  def initStreamingContext(sc: SparkContext): StreamingContext = {
-    new StreamingContext(sc, Seconds(1))
   }
 
 
