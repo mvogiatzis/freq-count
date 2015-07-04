@@ -1,7 +1,6 @@
 
 import java.text.DecimalFormat
 
-import _root_.LossyCountingSpark.Item.Item
 import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.dstream.{InputDStream, DStream}
 import org.apache.spark.streaming.{Minutes, Seconds, StreamingContext}
@@ -11,17 +10,22 @@ import scala.collection.{immutable, mutable}
 import scala.util.Random
 
 
-object LossyCountingSpark {
+object LossyCounting {
 
   /**
-   * 15% is the frequency above which we want to print out frequent items
+   * Frequency above which we want to print out frequent items
    */
-  val frequency = 15.0
+  val frequency = 0.2
 
   /**
-   * output = f*N - e*N, where N is the total number of windows
+   * output = f*N - e*N, where N is the total number of elements
    */
   val error = 0.1 * frequency
+
+  /**
+   * Window size = 1 / error
+   */
+  val windowSize = 1.0 / error
 
   val rand = new Random()
 
@@ -38,11 +42,11 @@ object LossyCountingSpark {
    * Simulation of the window input data
    */
   val itemBatches = List[List[String]](
-    List.concat(create(70, Item.Red), create(10, Item.Blue), create(15, Item.Yellow), create(2, Item.Brown), create(3, Item.Green)),
-    List.concat(create(60, Item.Red), create(20, Item.Blue), create(20, Item.Yellow)),
-    List.concat(create(70, Item.Red), create(15, Item.Blue), create(0, Item.Yellow), create(2, Item.Brown), create(13, Item.Green)),
-    List.concat(create(80, Item.Red), create(20, Item.Blue)),
-    List.concat(create(80, Item.Red), create(20, Item.Blue))
+    List.concat(create(19, Item.Red), create(11, Item.Blue), create(10, Item.Yellow), create(10, Item.Brown), create(0, Item.Green)),
+    List.concat(create(30, Item.Red), create(10, Item.Blue), create(10, Item.Yellow)),
+    List.concat(create(30, Item.Red), create(10, Item.Blue), create(0, Item.Yellow), create(5, Item.Brown), create(5, Item.Green)),
+    List.concat(create(40, Item.Red), create(10, Item.Blue)),
+    List.concat(create(40, Item.Red), create(10, Item.Blue))
   )
 
   def main(args: Array[String]): Unit = {
@@ -52,13 +56,13 @@ object LossyCountingSpark {
     val errorVal = sc.broadcast(error)
     val streamingContext = new StreamingContext(sc, Seconds(1))
     streamingContext.checkpoint("./checkpoint/")
-    var totalWindows = 0
+    var totalElements = 0L
 
     val rddQueue = new mutable.SynchronizedQueue[RDD[String]]()
     val inputDStream = streamingContext.queueStream(rddQueue)
 
     //update window on driver
-    inputDStream.foreachRDD(rdd => totalWindows += 1)
+    inputDStream.foreachRDD(rdd => totalElements += rdd.count())
 
     val items: DStream[String] = inputDStream.flatMap(line => line.split(" "))
     val itemOneValuePairs: DStream[(String, Int)] = items.map(item => (item, 1))
@@ -68,7 +72,11 @@ object LossyCountingSpark {
       new HashPartitioner(streamingContext.sparkContext.defaultParallelism))
 
     //keep only the items that exceed the threshold given by the Lossy Counting algorithm
-    val output = updatedState.filter(itemWithCounts => itemWithCounts._2.toDouble > (frequencyVal.value * totalWindows - errorVal.value * totalWindows))
+    val output = updatedState.filter{
+      itemWithCounts =>
+        println(s"Total elements $totalElements, predicate: ${frequencyVal.value * totalElements - errorVal.value * totalElements}")
+        itemWithCounts._2.toDouble > (frequencyVal.value * totalElements - errorVal.value * totalElements)
+    }
     output.print()
 
     streamingContext.start() // Start the computation
@@ -78,6 +86,7 @@ object LossyCountingSpark {
       rddQueue += streamingContext.sparkContext.makeRDD(itemBatches(i))
       Thread.sleep(1000)
     }
+    println(s"Frequency: $frequency, Error: $error, Window size: $windowSize")
     val labelWithCounts = calcTrueCounts(itemBatches)
     printTrueCounts(labelWithCounts)
 
@@ -104,8 +113,8 @@ object LossyCountingSpark {
 
   def printTrueCounts(labelWithCounts: mutable.HashMap[String, Int]) = {
     val totalElements = labelWithCounts.foldLeft(0)(_ + _._2)
-    println("True Counts")
     println(s"$totalElements total items")
+    println("True Counts")
     val df = new DecimalFormat("#.##")
     for (labelWithCount <- labelWithCounts) {
       val trueCount = labelWithCount._2
@@ -130,7 +139,7 @@ object LossyCountingSpark {
   }
 
 
-  def create(elements: Int, item: Item): List[String] = {
+  def create(elements: Int, item: LossyCounting.Item.Item): List[String] = {
     val seq: IndexedSeq[String] = for (i <- 1 to elements) yield {
       item.toString
     }
