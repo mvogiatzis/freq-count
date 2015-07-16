@@ -1,47 +1,78 @@
+package lossycounting
 
 import java.text.DecimalFormat
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.dstream.{InputDStream, DStream}
-import org.apache.spark.streaming.{Minutes, Seconds, StreamingContext}
-import org.apache.spark.{rdd, HashPartitioner, SparkContext, SparkConf}
-import scala.collection.immutable.IndexedSeq
-import scala.collection.{immutable, mutable}
+import org.apache.spark.streaming.{Seconds, StreamingContext}
+import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
+
+import scala.collection.mutable
 import scala.util.Random
+import utils.Utils._
+import model.Item
 
 
-object LossyCounting {
+/**
+ *
+ * @param frequency Frequency above which we want to print out frequent items
+ * @param error output = f*N - e*N, e is the error and N the total number of elements
+ */
+class LossyCounting[String] private (
+                            private var frequency: Double,
+                            private var error: Double
+                              ){
 
-  /**
-   * Frequency above which we want to print out frequent items
-   */
-  val frequency = 0.2
+  def this() = this(0.2, 0.02)
 
-  /**
-   * output = f*N - e*N, where N is the total number of elements
-   */
-  val error = 0.1 * frequency
-
-  /**
-   * Window size = 1 / error
-   */
-  val windowSize = 1.0 / error
+  val model = new LossyCountingModel[String](frequency, error)
 
   val rand = new Random()
 
-  object Item extends Enumeration{
-    type Item = Value
-    val Red = Value("Red")
-    val Green = Value("Green")
-    val Blue = Value ("Blue")
-    val Yellow = Value ("Yellow")
-    val Brown = Value ("Brown")
+  def setFrequency(frequency: Double): this.type ={
+    this.frequency = frequency
+    this
   }
+
+  def setError(error: Double): this.type = {
+    this.error = error
+    this
+  }
+
+  def run(rdd: RDD[String]): Unit = {
+
+//    model.update(rdd)
+  }
+
+  def updateFrequencyByKeyAndDecr(newValues: Seq[Int], currentCount: Option[Int]): Option[Int] = {
+    val sum: Int = newValues.sum
+    val aggregate: Int = currentCount match {
+      case Some(count) =>
+        count + sum
+      case None =>
+        sum
+    }
+    val decrementedValue = aggregate - 1
+    if (itemShouldBeEliminated(decrementedValue)) {
+      None //Spark will discard this key
+    } else {
+      Some(decrementedValue)
+    }
+  }
+
+  private def itemShouldBeEliminated(decrementedValue: Int): Boolean = {
+    decrementedValue <= 0
+  }
+
+}
+
+object LossyCounting {
 
   /**
    * Simulation of the window input data
    */
   val itemBatches = List[List[String]](
+
     List.concat(create(19, Item.Red), create(11, Item.Blue), create(10, Item.Yellow), create(10, Item.Brown), create(0, Item.Green)),
     List.concat(create(30, Item.Red), create(10, Item.Blue), create(10, Item.Yellow)),
     List.concat(create(30, Item.Red), create(10, Item.Blue), create(0, Item.Yellow), create(5, Item.Brown), create(5, Item.Green)),
@@ -50,26 +81,32 @@ object LossyCounting {
   )
 
   def main(args: Array[String]): Unit = {
+    val frequency = 0.2
+    val error = 0.1 * frequency
+    val windowSize = 1.0 / error
 
     val sc = initSparkContext()
     val frequencyVal = sc.broadcast(frequency)
     val errorVal = sc.broadcast(error)
     val streamingContext = new StreamingContext(sc, Seconds(1))
     streamingContext.checkpoint("./checkpoint/")
+    val partitioner = new HashPartitioner(streamingContext.sparkContext.defaultParallelism)
     var totalElements = 0L
 
     val rddQueue = new mutable.SynchronizedQueue[RDD[String]]()
     val inputDStream = streamingContext.queueStream(rddQueue)
 
     //update window on driver
-    inputDStream.foreachRDD(rdd => totalElements += rdd.count())
+    inputDStream.foreachRDD{rdd =>
+      val rddCount = rdd.count()
+      totalElements += rddCount
+    }
 
     val items: DStream[String] = inputDStream.flatMap(line => line.split(" "))
     val itemOneValuePairs: DStream[(String, Int)] = items.map(item => (item, 1))
     val countPerItem: DStream[(String, Int)] = itemOneValuePairs.reduceByKey((count1, count2) => count1 + count2)
 
-    val updatedState = countPerItem.updateStateByKey(updateFrequencyByKeyAndDecr _,
-      new HashPartitioner(streamingContext.sparkContext.defaultParallelism))
+    val updatedState = countPerItem.updateStateByKey(updateFrequencyByKeyAndDecr _, partitioner)
 
     //keep only the items that exceed the threshold given by the Lossy Counting algorithm
     val output = updatedState.filter{
@@ -78,10 +115,14 @@ object LossyCounting {
         itemWithCounts._2.toDouble > (frequencyVal.value * totalElements - errorVal.value * totalElements)
     }
     output.print()
+    println("Processing")
+
+
+
 
     streamingContext.start() // Start the computation
 
-    // Create and push some RDDs into the 
+    // Create and push some RDDs into the
     for (i <- itemBatches.indices) {
       rddQueue += streamingContext.sparkContext.makeRDD(itemBatches(i))
       Thread.sleep(1000)
@@ -92,7 +133,6 @@ object LossyCounting {
 
     streamingContext.stop()
   }
-
 
   def updateFrequencyByKeyAndDecr(newValues: Seq[Int], currentCount: Option[Int]): Option[Int] = {
     val sum: Int = newValues.sum
@@ -137,16 +177,6 @@ object LossyCounting {
     }
     map
   }
-
-
-  def create(elements: Int, item: LossyCounting.Item.Item): List[String] = {
-    val seq: IndexedSeq[String] = for (i <- 1 to elements) yield {
-      item.toString
-    }
-    seq.toList
-  }
-
-
 
   private def itemShouldBeEliminated(decrementedValue: Int): Boolean = {
     decrementedValue <= 0
