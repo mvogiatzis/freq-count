@@ -1,8 +1,9 @@
-package stickysampling
+package frequencycount.stickysampling
 
-import java.util
-
+import frequencycount.FrequencyCount
+import model.Item
 import utils.RandomNumberGenerator
+import utils.Utils._
 
 import scala.collection.immutable.HashMap
 import scala.collection.mutable
@@ -14,7 +15,7 @@ import scala.collection.mutable
  * @tparam T The type of item
  */
 class StickySamplingModel[T](val frequency: Double,
-                             val error: Double) {
+                             val error: Double) extends FrequencyCount[T] {
 
   private var totalProcessedElements = 0L
   private val map = mutable.HashMap.empty[T, Int]
@@ -89,7 +90,7 @@ class StickySamplingModel[T](val frequency: Double,
   }
 
   private def unsuccessfulCoinToss(): Boolean = {
-    rng.getNextDouble() < 0.5
+    rng.getNextDouble() > 0.5
   }
 
   def computeOutput(): Array[(T, Int)] = {
@@ -112,6 +113,32 @@ class StickySamplingModel[T](val frequency: Double,
 
   def calcProbabilityOfFailure(): Double ={
     0.1 * error
+  }
+
+}
+
+object StickySamplingModel{
+
+  def main(args: Array[String]): Unit = {
+      val frequency = 0.2
+      val error = 0.1 * frequency
+
+      val itemBatches = List(
+        List.concat(create(19, Item.Red), create(11, Item.Blue), create(10, Item.Yellow), create(10, Item.Brown), create(0, Item.Green)),
+        List.concat(create(30, Item.Red), create(10, Item.Blue), create(10, Item.Yellow)),
+        List.concat(create(30, Item.Red), create(10, Item.Blue), create(0, Item.Yellow), create(5, Item.Brown), create(5, Item.Green)),
+        List.concat(create(40, Item.Red), create(10, Item.Blue)),
+        List.concat(create(40, Item.Red), create(10, Item.Blue))
+      )
+
+      val model = new StickySamplingModel[String](frequency, error)
+      println(s"Frequency: $frequency, Error: $error Probability of failure: ${model.calcProbabilityOfFailure()}")
+      for (i <- itemBatches.indices) {
+        model.process(itemBatches(i))
+        model.computeOutput().foreach(pair => println(pair))
+        println("=============")
+        Thread.sleep(1000L)
+      }
   }
 
 }

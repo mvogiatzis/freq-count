@@ -1,9 +1,9 @@
 package stickysampling
 
+import frequencycount.stickysampling.StickySamplingModel
 import model.Item
-import org.mockito.Mockito
 import org.scalatest.mock.MockitoSugar
-import testutils.SomeUtils._
+import testutils.TestUtils._
 import unitspec.UnitSpec
 import utils.RandomNumberGenerator
 import utils.Utils._
@@ -63,15 +63,16 @@ class StickySamplingModelSpec extends UnitSpec with MockitoSugar {
     val t = (1.0 / error) * Math.log(1.0 / (frequency * model.calcProbabilityOfFailure()))
     println(s"The first $t elements will be sampled with rate 1, the next ${2*t} with probability 0.5 etc")
     //insert the first 120 items. The first 119 should be always selected (probability 1). The next 238 should be selected if unknown with prob 0.5
-    val stream = List.concat(create(50, Item.Red), create(50, Item.Blue), create(10, Item.Yellow), create(10, Item.Brown))
+    val stream = List.concat(create(50, Item.Red), create(50, Item.Blue), create(10, Item.Yellow), create(8, Item.Brown))
     when(mockRng.getNextDouble()).thenReturn(0.3)
 
     val step1Model = model.process(stream)
     assert(step1Model.getMap().isEmpty === false)
 
     //insert a different item and don't pick it
+    //this should also trigger a rate change and toin coss for each entry
     when(mockRng.getNextDouble()).thenReturn(0.7)
-    val unknownItemStream = create(1, Item.Green)
+    val unknownItemStream = create(2, Item.Green)
     val unknownItemModel = step1Model.process(unknownItemStream)
 
     assert(unknownItemModel.getMap().get(Item.Green.toString) === None)

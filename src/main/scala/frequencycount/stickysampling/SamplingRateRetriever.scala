@@ -1,4 +1,4 @@
-package stickysampling
+package frequencycount.stickysampling
 
 object SamplingRateRetriever {
 

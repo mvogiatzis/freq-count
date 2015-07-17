@@ -1,9 +1,10 @@
 package lossycounting
 
+import frequencycount.lossycounting.LossyCountingModel
 import model.Item
 import unitspec.UnitSpec
 import utils.Utils._
-import testutils.SomeUtils._
+import testutils.TestUtils._
 
 class LossyCountingModelSpec extends UnitSpec{
   val frequency = 0.2
