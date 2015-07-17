@@ -15,12 +15,11 @@ import scala.collection.mutable
  * @tparam T The type of item
  */
 class StickySamplingModel[T](val frequency: Double,
-                             val error: Double) extends FrequencyCount[T] {
+                             val error: Double,
+                              val probabilityOfFailure: Double) extends FrequencyCount[T] {
 
   private var totalProcessedElements = 0L
   private val map = mutable.HashMap.empty[T, Int]
-
-  val probabilityOfFailure = calcProbabilityOfFailure()
 
   var rng = new RandomNumberGenerator()
 
@@ -111,10 +110,6 @@ class StickySamplingModel[T](val frequency: Double,
     map
   }
 
-  def calcProbabilityOfFailure(): Double ={
-    0.1 * error
-  }
-
 }
 
 object StickySamplingModel{
@@ -122,6 +117,7 @@ object StickySamplingModel{
   def main(args: Array[String]): Unit = {
       val frequency = 0.2
       val error = 0.1 * frequency
+    val probabilityOfFailure = 0.1 * error
 
       val itemBatches = List(
         List.concat(create(19, Item.Red), create(11, Item.Blue), create(10, Item.Yellow), create(10, Item.Brown), create(0, Item.Green)),
@@ -131,8 +127,8 @@ object StickySamplingModel{
         List.concat(create(40, Item.Red), create(10, Item.Blue))
       )
 
-      val model = new StickySamplingModel[String](frequency, error)
-      println(s"Frequency: $frequency, Error: $error Probability of failure: ${model.calcProbabilityOfFailure()}")
+      val model = new StickySamplingModel[String](frequency, error, probabilityOfFailure)
+      println(s"Frequency: $frequency, Error: $error Probability of failure: $probabilityOfFailure")
       for (i <- itemBatches.indices) {
         model.process(itemBatches(i))
         model.computeOutput().foreach(pair => println(pair))

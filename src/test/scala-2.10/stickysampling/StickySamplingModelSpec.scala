@@ -15,10 +15,11 @@ class StickySamplingModelSpec extends UnitSpec with MockitoSugar {
 
     val frequency = 0.5
     val error = 0.1 * frequency
+    val probabilityOfFailure = 0.1 * error
 
-    val model = new StickySamplingModel[String](frequency, error)
+    val model = new StickySamplingModel[String](frequency, error, probabilityOfFailure)
     //t = 119
-    val t = (1.0 / error) * Math.log(1.0 / (frequency * model.calcProbabilityOfFailure()))
+    val t = (1.0 / error) * Math.log(1.0 / (frequency * probabilityOfFailure))
 
     val incomingStream = List.concat(create(19, Item.Red), create(11, Item.Blue), create(10, Item.Yellow), create(10, Item.Brown), create(0, Item.Green))
     val step0 = model.process(incomingStream)
@@ -34,6 +35,7 @@ class StickySamplingModelSpec extends UnitSpec with MockitoSugar {
   it should "give correct output for elements with frequency below, in false-positive range and above the set frequency" in {
     val frequency = 0.2
     val error = 0.1 * frequency
+    val probabilityOfFailure = 0.1 * error
 
     //red freq = 47 / 100 Pass
     //blue freq = 19 / 100 Pass
@@ -42,7 +44,7 @@ class StickySamplingModelSpec extends UnitSpec with MockitoSugar {
     //green freq = 0/100 Fail
     val stream = List.concat(create(47, Item.Red), create(19, Item.Blue), create(18, Item.Yellow), create(8, Item.Brown), create(0, Item.Green))
 
-    val model = new StickySamplingModel[String](frequency, error)
+    val model = new StickySamplingModel[String](frequency, error, probabilityOfFailure)
     model.process(stream)
 
     val output = model.computeOutput()
@@ -56,11 +58,12 @@ class StickySamplingModelSpec extends UnitSpec with MockitoSugar {
   it should "sample items that do not exist" in {
     val frequency = 0.5
     val error = 0.1 * frequency
+    val probabilityOfFailure = 0.1 * error
 
     val mockRng = mock[RandomNumberGenerator]
-    val model = new StickySamplingModel[String](frequency, error).withRng(mockRng)
+    val model = new StickySamplingModel[String](frequency, error, probabilityOfFailure).withRng(mockRng)
 
-    val t = (1.0 / error) * Math.log(1.0 / (frequency * model.calcProbabilityOfFailure()))
+    val t = (1.0 / error) * Math.log(1.0 / (frequency * probabilityOfFailure))
     println(s"The first $t elements will be sampled with rate 1, the next ${2*t} with probability 0.5 etc")
     //insert the first 120 items. The first 119 should be always selected (probability 1). The next 238 should be selected if unknown with prob 0.5
     val stream = List.concat(create(50, Item.Red), create(50, Item.Blue), create(10, Item.Yellow), create(8, Item.Brown))
