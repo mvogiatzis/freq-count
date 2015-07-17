@@ -1,5 +1,5 @@
 # Frequency Count Algorithms for Data Streams
-The project provides a Scala implementation of the Lossy Counting and Sticky Sampling algorithms for efficient counting on data streams. You can find a [detailed description of the algorithms at this post](http://blank.com).
+The project provides a Scala implementation of the **Lossy Counting** and **Sticky Sampling** algorithms for efficient counting on data streams. You can find a [description of the algorithms at this post](http://blank.com).
 
 We want to know which items exceed a certain frequency and identify events and patterns. Answers to such questions in real-time over a continuous data stream is not an easy task when serving millions of hits due to the following challenges:
 
