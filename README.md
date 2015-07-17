@@ -11,4 +11,8 @@ Lossy Counting:
 Sticky Sampling:  
 `sbt "run-main frequencycount.stickysampling.StickySamplingModel"`
 
+## Contributing
+Have you found any issues?
+Can you implement this in a distributed fashion?
 
+Please contact me at michael@micvog.com or create a new Issue. Pull requests are always welcome.
