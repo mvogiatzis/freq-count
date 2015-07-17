@@ -1,7 +1,7 @@
 package stickysampling
 
+import frequencycount.Item
 import frequencycount.stickysampling.StickySamplingModel
-import model.Item
 import org.scalatest.mock.MockitoSugar
 import testutils.TestUtils._
 import unitspec.UnitSpec

@@ -1,7 +1,7 @@
 package lossycounting
 
+import frequencycount.Item
 import frequencycount.lossycounting.LossyCountingModel
-import model.Item
 import unitspec.UnitSpec
 import utils.Utils._
 import testutils.TestUtils._

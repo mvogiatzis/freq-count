@@ -1,7 +1,6 @@
 package frequencycount.lossycounting
 
-import frequencycount.FrequencyCount
-import model.Item
+import frequencycount.{Item, FrequencyCount}
 import utils.Utils._
 
 import scala.collection.mutable

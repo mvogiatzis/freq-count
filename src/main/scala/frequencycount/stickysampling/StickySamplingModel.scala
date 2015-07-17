@@ -1,7 +1,6 @@
 package frequencycount.stickysampling
 
-import frequencycount.FrequencyCount
-import model.Item
+import frequencycount.{Item, FrequencyCount}
 import utils.RandomNumberGenerator
 import utils.Utils._
 

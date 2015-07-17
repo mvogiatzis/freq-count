@@ -1,6 +1,6 @@
 package utils
 
-import model.Item
+import frequencycount.Item
 
 import scala.collection.immutable.IndexedSeq
 

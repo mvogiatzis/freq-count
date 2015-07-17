@@ -1,5 +1,4 @@
-package model
-
+package frequencycount
 
 object Item extends Enumeration {
   type Item = Value
