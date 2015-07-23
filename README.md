@@ -1,4 +1,4 @@
-# Frequency Count Algorithms for Data Streams
+# Frequency Count Algorithms for Data Streams [![Build Status](https://travis-ci.org/mvogiatzis/freq-count.svg?branch=master)](https://travis-ci.org/mvogiatzis/freq-count)
 The project provides a Scala implementation of the **Lossy Counting** and **Sticky Sampling** algorithms for efficient counting on data streams. You can find a [description of the algorithms at this post](http://micvog.com/2015/07/18/frequency-counting-algorithms-over-data-streams/).
 
 We want to know which items exceed a certain frequency and identify events and patterns. Answers to such questions in real-time over a continuous data stream is not an easy task when serving millions of hits due to the following challenges:
