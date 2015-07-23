@@ -1,4 +1,4 @@
-name := "Probabilistic-Counting"
+name := "freq-count"
 
 version := "1.0"
 
