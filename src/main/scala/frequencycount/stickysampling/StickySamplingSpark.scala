@@ -7,7 +7,8 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
-
+import storage.MemCacheDB
+import utils.Utils._
 import scala.collection.parallel.mutable
 
 object StickySamplingSpark {
@@ -63,6 +64,7 @@ object StickySamplingSpark {
     }
   }
 
+  case class ItemWithId(item: String, id: Long)
 
   def main(args: Array[String]): Unit = {
 
