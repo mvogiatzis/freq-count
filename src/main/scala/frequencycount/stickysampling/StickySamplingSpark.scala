@@ -3,6 +3,12 @@ package frequencycount.stickysampling
 import java.util.concurrent.ThreadLocalRandom
 
 import frequencycount.Item
+import org.apache.spark.rdd.RDD
+import org.apache.spark.streaming.dstream.DStream
+import org.apache.spark.streaming.{Seconds, StreamingContext}
+import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
+
+import scala.collection.parallel.mutable
 
 object StickySamplingSpark {
 

@@ -1,5 +1,7 @@
 package frequencycount.lossycounting
 
+import java.text.DecimalFormat
+
 import frequencycount.Item
 
 import scala.collection.parallel.mutable
