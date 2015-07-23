@@ -8,14 +8,9 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import utils.Utils._
+import scala.collection.mutable
 
 object LossyCountingSpark {
-
-  case class ItemCountRate(itemId: Long, rate: Int, currentCount: Long) {
-    override def toString(): String ={
-      "Count= " + currentCount + " rate=" + rate + " itemId= "+itemId
-    }
-  }
 
   /**
    * Simulation of the window input data

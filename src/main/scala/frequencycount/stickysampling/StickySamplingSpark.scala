@@ -9,7 +9,7 @@ import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
 import storage.MemCacheDB
 import utils.Utils._
-import scala.collection.parallel.mutable
+import scala.collection.mutable
 
 object StickySamplingSpark {
 
@@ -65,6 +65,13 @@ object StickySamplingSpark {
   }
 
   case class ItemWithId(item: String, id: Long)
+
+  case class ItemCountRate(itemId: Long, rate: Int, currentCount: Long) {
+    override def toString(): String ={
+      "Count= " + currentCount + " rate=" + rate + " itemId= "+itemId
+    }
+  }
+
 
   def main(args: Array[String]): Unit = {
 
