@@ -22,7 +22,7 @@ Run the tests using
 `sbt test`
 
 ## Contributing
-Have you found any issues?
-Can you implement this in a distributed fashion?
+Have you found any issues? Want to contribute?
+Help me finish the distributed implementation on Spark (see branch).
 
 Please contact me at michael@micvog.com or create a new Issue. Pull requests are always welcome.
