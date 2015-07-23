@@ -23,6 +23,7 @@ Run the tests using
 
 ## Contributing
 Have you found any issues? Want to contribute?
+
 Help me finish the distributed implementation on Spark (see branch).
 
 Please contact me at michael@micvog.com or create a new Issue. Pull requests are always welcome.
